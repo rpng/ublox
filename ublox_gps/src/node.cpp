@@ -113,7 +113,13 @@ void UbloxNode::addFirmwareInterface() {
 
 void UbloxNode::addProductInterface(std::string product_category,
                                     std::string ref_rov) {
-  if (product_category.compare("HPG") == 0 && ref_rov.compare("REF") == 0)
+  if (product_category.compare("HPS") == 0 && ref_rov.compare("REF") == 0)
+    components_.push_back(ComponentPtr(new HpgRefProduct));
+  else if (product_category.compare("HPS") == 0 && ref_rov.compare("ROV") == 0)
+    components_.push_back(ComponentPtr(new HpgRovProduct));
+  else if (product_category.compare("HPS") == 0)
+    components_.push_back(ComponentPtr(new HpPosRecProduct));
+  else if (product_category.compare("HPG") == 0 && ref_rov.compare("REF") == 0)
     components_.push_back(ComponentPtr(new HpgRefProduct));
   else if (product_category.compare("HPG") == 0 && ref_rov.compare("ROV") == 0)
     components_.push_back(ComponentPtr(new HpgRovProduct));
@@ -558,6 +564,7 @@ void UbloxNode::initialize() {
     if(nh->param("raw_data", false))
       components_.push_back(ComponentPtr(new RawDataProduct));
   }
+
   // Must set firmware & hardware params before initializing diagnostics
   for (int i = 0; i < components_.size(); i++)
     components_[i]->getRosParams();
@@ -1206,6 +1213,15 @@ bool UbloxFirmware8::configureUblox() {
 }
 
 void UbloxFirmware8::subscribe() {
+  // Subscribe to RAW messages
+  nh->param("publish/rxm/raw", enabled["rxm_raw"], enabled["rxm"]);
+  if (enabled["rxm_raw"])
+    gps.subscribe<ublox_msgs::RxmRAWX>(boost::bind(
+        publish<ublox_msgs::RxmRAWX>, _1, "rxmraw"), kSubscribeRate);
+
+  // Subscribe to RXM SFRB
+    gps.subscribe<ublox_msgs::RxmSFRBX>(boost::bind(
+        publish<ublox_msgs::RxmSFRBX>, _1, "rxmsfrbx"), kSubscribeRate);
   // Whether to publish Nav PVT messages
   nh->param("publish/nav/pvt", enabled["nav_pvt"], enabled["nav"]);
   // Subscribe to Nav PVT
@@ -1302,6 +1318,16 @@ bool AdrUdrProduct::configureUblox() {
 
 void AdrUdrProduct::subscribe() {
   nh->param("publish/esf/all", enabled["esf"], true);
+  
+  // Subscribe to RAW messages
+  nh->param("publish/rxm/raw", enabled["rxm_raw"], enabled["rxm"]);
+  if (enabled["rxm_raw"])
+    gps.subscribe<ublox_msgs::RxmRAWX>(boost::bind(
+        publish<ublox_msgs::RxmRAWX>, _1, "rxmraw"), kSubscribeRate);
+
+  // Subscribe to RXM SFRB
+    gps.subscribe<ublox_msgs::RxmSFRBX>(boost::bind(
+        publish<ublox_msgs::RxmSFRBX>, _1, "rxmsfrbx"), kSubscribeRate);
 
   // Subscribe to NAV ATT messages
   nh->param("publish/nav/att", enabled["nav_att"], enabled["nav"]);
@@ -1512,6 +1538,12 @@ bool HpgRefProduct::configureUblox() {
 }
 
 void HpgRefProduct::subscribe() {
+  // Subscribe to RAW messages
+    gps.subscribe<ublox_msgs::RxmRAWX>(boost::bind(
+        publish<ublox_msgs::RxmRAWX>, _1, "rxmraw"), kSubscribeRate);
+  // Subscribe to RXM SFRB
+    gps.subscribe<ublox_msgs::RxmSFRBX>(boost::bind(
+        publish<ublox_msgs::RxmSFRBX>, _1, "rxmsfrbx"), kSubscribeRate);
   // Whether to publish Nav Survey-In messages
   nh->param("publish/nav/svin", enabled["nav_svin"], enabled["nav"]);
   // Subscribe to Nav Survey-In
@@ -1616,6 +1648,12 @@ bool HpgRovProduct::configureUblox() {
 }
 
 void HpgRovProduct::subscribe() {
+  // Subscribe to RAW messages
+    gps.subscribe<ublox_msgs::RxmRAWX>(boost::bind(
+        publish<ublox_msgs::RxmRAWX>, _1, "rxmraw"), kSubscribeRate);
+  // Subscribe to RXM SFRB
+    gps.subscribe<ublox_msgs::RxmSFRBX>(boost::bind(
+        publish<ublox_msgs::RxmSFRBX>, _1, "rxmsfrbx"), kSubscribeRate);
   // Whether to publish Nav Relative Position NED
   nh->param("publish/nav/relposned", enabled["nav_relposned"], enabled["nav"]);
   // Subscribe to Nav Relative Position NED messages (also updates diagnostics)
